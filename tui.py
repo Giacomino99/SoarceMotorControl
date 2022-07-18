@@ -116,7 +116,7 @@ def setup():
         print_out('Connecting to controller...')
         curses.doupdate()
         if TEST_MODE:
-            arduino = Dummy(PING, PONG, 5, 3)
+            arduino = Dummy(PING, PONG, 5, 1)
         else:
             arduino = serial.Serial(port=ports[x].device, baudrate=19200, timeout = 0, parity = 'N', stopbits = 1, bytesize = 8)
         app.device = arduino
