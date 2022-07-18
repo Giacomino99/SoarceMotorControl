@@ -160,9 +160,11 @@ def setup():
 def read_until(term = b'\n'):
     msg = b''
     i = app.device.read()
-    while i != term and i != b'':
+    n = 0
+    while i != term and i != b'' and n < 1000:
         msg += i
         i = app.device.read()
+        n += 1
     app.device.reset_input_buffer()
     return msg + i
 
