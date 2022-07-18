@@ -429,22 +429,22 @@ def draw_info(now = False):
     app.info_win.move(1,1)
     y = 1
     for m in app.motors:
-        if y + 6 >= app.info_win.getmaxyx()[0] - len(app.sensors) * 3 + 1:
+        if y + 5 >= app.info_win.getmaxyx()[0] - len(app.sensors) * 3 + 1:
             break
         app.info_win.attron(curses.color_pair(2)) if m.state else app.info_win.attron(curses.color_pair(1))
         app.info_win.addnstr(y, 1, f'{m.name}:', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+1, 4, f'Symbol: {m.symbol}', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+2, 4, f'Speed: {m.speed}', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+3, 4, f'Direction: ' + ('Forward' if m.direction else 'Backward'), INFO_WIN_WIDTH - 2)
-        app.info_win.addnstr(y+4, 4, f'Enabled: {m.state}', INFO_WIN_WIDTH - 2)
+        # app.info_win.addnstr(y+4, 4, f'Enabled: {m.state}', INFO_WIN_WIDTH - 2)
         app.info_win.attron(curses.color_pair(5))
-        app.info_win.hline(y+5, 1, curses.ACS_HLINE, INFO_WIN_WIDTH - 2)
-        y += 6
+        app.info_win.hline(y+4, 1, curses.ACS_HLINE, INFO_WIN_WIDTH - 2)
+        y += 5
 
-    if curses.LINES - (len(app.motors)*6 + len(app.sensors)*3 + 4) > 8:
+    if curses.LINES - (len(app.motors)*5 + len(app.sensors)*3 + 4) > 8:
         app.info_win.attron(curses.color_pair(2))
         for i, l in enumerate(LOGO.splitlines()):
-            app.info_win.addstr((len(app.motors)*6) + ((curses.LINES - (len(app.sensors)*3) - (len(app.motors)*6) - 8)//2) + i, (INFO_WIN_WIDTH - 2 - 18)//2, l)
+            app.info_win.addstr((len(app.motors)*5) + ((curses.LINES - (len(app.sensors)*3) - (len(app.motors)*5) - 8)//2) + i, (INFO_WIN_WIDTH - 2 - 18)//2, l)
         app.info_win.attron(curses.color_pair(5))
 
     y = curses.LINES - 1 - len(app.sensors)*3
