@@ -236,23 +236,23 @@ def init_curses(stdscr):
     # Init app
     app.stdscr = stdscr
     app.stdscr.attron(curses.color_pair(2))
-    app.stdscr.encoding = 'utf_8'
+    # app.stdscr.encoding = 'utf_8'
 
     app.output_win = curses.newpad(curses.LINES, max(curses.COLS, 128))
     app.output_win.attron(curses.color_pair(2))
-    app.output_win.encoding = 'utf-8'
+    # app.output_win.encoding = 'utf-8'
     rectangle(app.stdscr, 0, 0, curses.LINES - COMMAND_WIN_HEIGHT - 1, curses.COLS - INFO_WIN_WIDTH - 1)
     app.output_win.leaveok(True)
 
     app.info_win = curses.newwin(curses.LINES, INFO_WIN_WIDTH, 0, curses.COLS - INFO_WIN_WIDTH)
     app.info_win.attron(curses.color_pair(5))
-    app.info_win.encoding = 'utf-8'
+    # app.info_win.encoding = 'utf-8'
     app.info_win.border()
     app.info_win.leaveok(True)
 
     app.command_win = curses.newwin(COMMAND_WIN_HEIGHT, curses.COLS - INFO_WIN_WIDTH, curses.LINES - COMMAND_WIN_HEIGHT, 0)
     app.command_win.attron(curses.color_pair(3))
-    app.command_win.encoding = 'utf-8'
+    # app.command_win.encoding = 'utf-8'
     app.command_win.border()
     app.command_win.nodelay(True)
     app.command_win.keypad(True)
