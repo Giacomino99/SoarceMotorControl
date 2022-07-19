@@ -51,8 +51,8 @@ void execute();
 
 #define NUM_MOTORS 2
 motor motors[NUM_MOTORS] = {
-    {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_1) , true, ENA_1},
-    {'B', "Motor 2", AccelStepper(1, PUL_2, DIR_2) , true, ENA_2},
+    {'B', "Motor 1", AccelStepper(1, PUL_2, DIR_2) , true, ENA_2},
+    {'A', "Motor 2", AccelStepper(1, PUL_1, DIR_1) , true, ENA_1},
 };
 
 #define NUM_SENSORS 3
