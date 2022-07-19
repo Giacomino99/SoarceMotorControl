@@ -53,11 +53,11 @@ void rander(void* s);
 void establish_comm();
 void execute();
 
-#define NUM_MOTORS 2
+#define NUM_MOTORS 3
 motor motors[NUM_MOTORS] = {
     {'B', "Motor 1", AccelStepper(1, PUL_2, DIR_2) , true, ENA_2},
     {'A', "Motor 2", AccelStepper(1, PUL_1, DIR_1) , true, ENA_1},
-    {'A', "Linear 3", AccelStepper(1, PUL_3, DIR_3) , true, ENA_3},
+    {'C', "Linear 3", AccelStepper(1, PUL_3, DIR_3) , true, ENA_3},
 };
 
 #define NUM_SENSORS 3
