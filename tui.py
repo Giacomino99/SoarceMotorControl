@@ -13,6 +13,7 @@ import multiprocessing
 
 from logos import *
 from dummy import Dummy
+from config import *
 
 
 '''
@@ -20,7 +21,7 @@ app: Input, Output, Info, std
 
 Functions: print_out, draw_info, user_input
 '''
-TEST_MODE = False
+TEST_MODE = True
 BOLBI_TIME = False
 
 INFO_WIN_WIDTH = 30
@@ -31,10 +32,6 @@ PONG = 0XB16B00B5
 AUTO_DEVICE = 'arduino'
 MARKER = '>> '
 UPDATE_INTERVAL = 0.5
-NUMBERS = {}
-
-EMAIL = ''
-PASSWORD = ''
 
 GRADIENT = [39, 38, 45, 44, 43, 42, 41, 40]
 
@@ -499,30 +496,6 @@ def message(cmds):
             server.sendmail(EMAIL, NUMBERS[cmds[1].lower()], ' '.join(cmds[2:]))
         except:
             return
-
-    global cmd
-    print_out(MARKER + cmd)
-    split_command = cmd.split(' ')
-    if 'help' in split_command:
-        send_help()
-    elif 'logo' in split_command:
-        print_out(LOGO)
-    elif 'splash' in split_command:
-        print_out(SPLASH)
-    elif 'bolbi' in split_command:
-        slap_and_clap()
-    elif len(split_command) >= 2:
-        if split_command[0] == 'exec':
-            run_script(split_command[1])
-        elif len(split_command) >= 3 and split_command[0] == 'message':
-            multiprocessing.active_children() # Joins all complete threads
-            multiprocessing.Process(target = message, args = (split_command,)).start()
-        else:
-            print_out(execute_motors(split_command))
-    else:
-        print_out(f'Command "{cmd}" is not a valid command.')
-    cmd = ''
-    return
 
 def run_script(file):
     try:
