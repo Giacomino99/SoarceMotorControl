@@ -4,6 +4,10 @@
 // #include <DallasTemperature.h>
 // #include <NonBlockingDallas.h>
 
+#define PUL_3 11
+#define DIR_3 10
+#define ENA_3 9
+
 #define PUL_1 8
 #define DIR_1 7
 #define ENA_1 6
@@ -53,6 +57,7 @@ void execute();
 motor motors[NUM_MOTORS] = {
     {'B', "Motor 1", AccelStepper(1, PUL_2, DIR_2) , true, ENA_2},
     {'A', "Motor 2", AccelStepper(1, PUL_1, DIR_1) , true, ENA_1},
+    {'A', "Linear 3", AccelStepper(1, PUL_3, DIR_3) , true, ENA_3},
 };
 
 #define NUM_SENSORS 3
