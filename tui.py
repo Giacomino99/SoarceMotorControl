@@ -21,7 +21,7 @@ app: Input, Output, Info, std
 
 Functions: print_out, draw_info, user_input
 '''
-TEST_MODE = True
+TEST_MODE = False
 BOLBI_TIME = False
 
 INFO_WIN_WIDTH = 30
