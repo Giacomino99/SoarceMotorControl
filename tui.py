@@ -9,7 +9,6 @@ import random
 import time
 import smtplib
 import multiprocessing
-# from playsound import playsound
 
 from logos import *
 from dummy import Dummy
@@ -29,7 +28,8 @@ COMMAND_WIN_HEIGHT = 3
 EDGE = 1
 PING = 0XABADBABE
 PONG = 0XB16B00B5
-AUTO_DEVICE = 'arduino'
+# if ttyACM0 is used for something else it might break
+AUTO_DEVICE = ['arduino', 'ttyACM0']
 MARKER = '>> '
 UPDATE_INTERVAL = 0.5
 
@@ -61,11 +61,18 @@ class sensor:
     value: float
     unit: str
 
+class window:
+    def __init__(self, window, color):
+        self.window = window
+        self.color = color
+        self.pad = 0
+
+# Initialize app to int, change later; Python doesn't care
 app = APP(0, 0, 0, 0, 0, 0, 0)
 history = ['']
 idx = 0
 cmd = ''
-timer = time.time
+timer = time.time()
 
 # Eww yucky long bad
 def setup():
@@ -74,8 +81,10 @@ def setup():
     curses.doupdate()
     time.sleep(0.2)
 
-    ports = list(serial.tools.list_ports.grep(AUTO_DEVICE))
-
+    for device in AUTO_DEVICE:
+        ports = list(serial.tools.list_ports.grep(device))
+        if len(ports) == 1:
+            break
     global cmd
     x = 0
     if len(ports) == 1:
@@ -165,6 +174,7 @@ def read_until(term = b'\n'):
     app.device.reset_input_buffer()
     return msg + i
 
+# TODO: DON'T CRASH WITH RESIZE
 def intro_animation():
     print_out(' ')
     print_out(LOGO, 3)
@@ -185,6 +195,7 @@ def intro_animation():
     if BOLBI_TIME:
         slap_and_clap()
 
+# TODO: DON'T CRASH WITH RESIZE
 def slap_and_clap():
     bolbis = BOLBI.splitlines()
     if curses.COLS - INFO_WIN_WIDTH - 3 < len(bolbis[0]):
@@ -202,7 +213,6 @@ def slap_and_clap():
     time.sleep(1)
     bolbi_win.addstr(1, 0, 'SLAP SLAP SLAP! CLAP CLAP CLAP!')
     bolbi_win.refresh(0, 0, curses.LINES - COMMAND_WIN_HEIGHT - i - 2, x_pos, curses.LINES - COMMAND_WIN_HEIGHT - 2, x_pos + len(bolbis[0]))
-    # playsound('slapclap.wav')
     time.sleep(1)
     bolbi_win.move(0,0)
     bolbi_win.clrtoeol()
@@ -264,6 +274,11 @@ def init_curses(stdscr):
     app.command_win.noutrefresh()
 
     curses.doupdate()
+
+    test_win = window(app.command_win, curses.color_pair(2))
+    test_win2 = window(app.output_win, curses.color_pair(3))
+    print_out(test_win.pad)
+    print_out(test_win2.pad)
     return
 
 def init_perif(config):
@@ -434,7 +449,7 @@ def draw_info(now = False):
         app.info_win.addnstr(y, 1, f'{m.name}:', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+1, 4, f'Symbol: {m.symbol}', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+2, 4, f'Speed: {m.speed}', INFO_WIN_WIDTH - 2)
-        app.info_win.addnstr(y+3, 4, f'Direction: ' + ('Forward' if m.direction else 'Backward'), INFO_WIN_WIDTH - 2)
+        app.info_win.addnstr(y+3, 4, f'Direction: ' + ('Backward' if not m.direction else ('Linear' if m.direction == 2 else 'Forward')), INFO_WIN_WIDTH - 2)
         # app.info_win.addnstr(y+4, 4, f'Enabled: {m.state}', INFO_WIN_WIDTH - 2)
         app.info_win.attron(curses.color_pair(5))
         app.info_win.hline(y+4, 1, curses.ACS_HLINE, INFO_WIN_WIDTH - 2)
@@ -523,6 +538,7 @@ def run_script(file):
     print_out('Execution finished')
     return
 
+# TODO: DON'T CRASH WITH RESIZE
 def spin_wait(dur):
     t = time.time()
     while time.time() < t + dur:
@@ -567,6 +583,12 @@ def execute_motors(split_command):
                 app.motors[i].direction = False
                 app.device.write(cmd)
                 return f'Spinning {m.name} backward'
+
+            elif split_command[1] == 'line':
+                cmd = bytes(m.internal + '-5\n', 'utf-8')
+                app.motors[i].direction = 2
+                app.device.write(cmd)
+                return f'{m.name} set to linear mode'
 
             elif split_command[1].isdigit():
                 cmd = bytes(m.internal+split_command[1]+'\n', 'utf-8')
@@ -613,6 +635,9 @@ def dont_crash():
         if app.command_win.getch() == curses.KEY_F1:
             exit(0)
 
+# Custom rectangle funtion with option to choose character
+# Can be used with ' ' as ch to clear a previously drawn border
+# Mostly copied from curses.textpad.rectangle(), if it's broken blame them
 def rectangle(win, uly, ulx, lry, lrx, ch = None):
     if ch == None:
         win.vline(uly+1, ulx, curses.ACS_VLINE, lry - uly - 1)

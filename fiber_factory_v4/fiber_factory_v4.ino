@@ -17,7 +17,9 @@
 #define ENA_2 2
 
 #define TMP A0
-#define INTERVAL 500
+#define INTERVAL 5000
+
+#define LINEAR_DISTANCE 1600*10
 
 typedef void (*SensorFunction) (void* s);
 
@@ -25,10 +27,10 @@ struct motor {
     char symbol;
     char* name;
     AccelStepper motor;
-    bool dir;
+    short dir;
     int ena_pin;
+    long speed;
 };
-
 
 struct sensor {
     char symbol;
@@ -52,12 +54,13 @@ void get_temp(void* s);
 void rander(void* s);
 void establish_comm();
 void execute();
+void linear_motion(motor* lm);
 
 #define NUM_MOTORS 3
 motor motors[NUM_MOTORS] = {
-    {'B', "Motor 1", AccelStepper(1, PUL_2, DIR_2) , true, ENA_2},
-    {'A', "Motor 2", AccelStepper(1, PUL_1, DIR_1) , true, ENA_1},
-    {'C', "Linear 3", AccelStepper(1, PUL_3, DIR_3) , true, ENA_3},
+    {'A', "Motor 1", AccelStepper(1, PUL_2, DIR_2) , 1, ENA_2, 0},
+    {'B', "Motor 2", AccelStepper(1, PUL_1, DIR_1) , 1, ENA_1, 0},
+    {'C', "Linear 3", AccelStepper(1, PUL_3, DIR_3) , 1, ENA_3, 0},
 };
 
 #define NUM_SENSORS 3
@@ -106,7 +109,7 @@ void establish_comm() {
 }
 
 void setup() {
-    
+
     for (int i = 0; i < NUM_MOTORS; ++i) {
         motors[i].motor.setMaxSpeed(64000);
         motors[i].motor.setAcceleration(200.0);
@@ -114,6 +117,7 @@ void setup() {
         motors[i].motor.setEnablePin(motors[i].ena_pin);
         motors[i].motor.disableOutputs();
     }
+    // motors[2].motor.moveTo(1600*3);
 
     Serial.begin(19200);
 
@@ -159,7 +163,7 @@ void com() {
     {
         if (motors[i].symbol == input[0])
         {
-            execute(&motors[i].motor);
+            execute(&motors[i]);
             return;
         }
     }
@@ -171,34 +175,49 @@ void com() {
 }
 
 // executes the command stored in input on the given motor
-void execute(AccelStepper* sel_motor) {
+void execute(motor* sel_motor) {
     ctrl = input.substring(1).toInt();
     if (ctrl == -4) {
-        sel_motor->disableOutputs();
+        sel_motor->motor.disableOutputs();
     }
     else if (ctrl == -1) {
-        sel_motor->enableOutputs();
+        sel_motor->motor.enableOutputs();
     }
     else if (ctrl == -2) {
-        if (sel_motor->speed() < 0) {
-            sel_motor->setSpeed(sel_motor->speed()*-1);
+        sel_motor->dir = 1;
+        if (sel_motor->speed < 0) {
+            sel_motor->speed = sel_motor->motor.speed()*-1;
         }
+        sel_motor->motor.setSpeed(sel_motor->speed);
     }
     else if (ctrl == -3) {
-        if (sel_motor->speed() > 0) {
-            sel_motor->setSpeed(sel_motor->speed()*-1);
+        sel_motor->dir = 0;
+        if (sel_motor->speed > 0) {
+            sel_motor->speed = sel_motor->motor.speed()*-1;
         }
+        sel_motor->motor.setSpeed(sel_motor->speed);
+    }
+    else if (ctrl == -5) {
+        sel_motor->motor.setSpeed(3200);
+        sel_motor->dir = 2;
+        sel_motor->motor.setCurrentPosition(0);
+        sel_motor->motor.moveTo(0);
     }
     else {
-        if (sel_motor->speed() < 0) { ctrl = ctrl * -1; }
-        sel_motor->setSpeed(ctrl);
+        if (sel_motor->speed < 0) {   ctrl = ctrl * -1; }
+        sel_motor->speed = ctrl;
+        sel_motor->motor.setSpeed(ctrl);
     }
 }
 
 void loop() {
     for (int i = 0; i < NUM_MOTORS; ++i)
     {
-        motors[i].motor.runSpeed();
+        if (motors[i].dir == 2) {
+            linear_motion(&motors[i]);
+        } else {
+            motors[i].motor.runSpeed();
+        }
     }
 
     if (Serial.available()) {
@@ -223,4 +242,15 @@ void loop() {
         Serial.println(out);
         temp_timer = millis();
     }
+}
+
+void linear_motion(motor* lm) {
+    if (lm->motor.distanceToGo() == 0) {
+        if (lm->motor.currentPosition() == 0) {
+            lm->motor.moveTo(lm->speed);
+        } else {
+            lm->motor.moveTo(0);
+        }
+    }
+    lm->motor.run();
 }
