@@ -275,10 +275,10 @@ def init_curses(stdscr):
 
     curses.doupdate()
 
-    test_win = window(app.command_win, curses.color_pair(2))
-    test_win2 = window(app.output_win, curses.color_pair(3))
-    print_out(test_win.pad)
-    print_out(test_win2.pad)
+    # test_win = window(app.command_win, curses.color_pair(2))
+    # test_win2 = window(app.output_win, curses.color_pair(3))
+    # print_out(test_win.pad)
+    # print_out(test_win2.pad)
     return
 
 def init_perif(config):
@@ -301,6 +301,28 @@ def init_perif(config):
         info = s_conf[s].split(',')
         sensors.append(sensor(info[2], info[0], 0, info[1]))
 
+    if len(config) > 2 and 'REC' in config[2]:
+        cmd = bytes(';0;-69;\n', 'utf-8')
+        app.device.write(cmd);
+        time.sleep(0.4);
+        live_state = read_until().decode('utf-8')
+        live_state = live_state.split('\n')[0].split(';')
+        for i in live_state[1:]:
+            for m in motors:
+                s = i.split(',')
+                if s[0] == m.internal:
+                    m.speed = int(s[1])
+                    if s[3] == '1':
+                        m.direction = 2
+                    elif s[2] == '1':
+                        m.direction = 1
+                    else:
+                        m.direction = 0
+                    m.state = bool(int(s[4]))
+                    break
+
+        # ;sym, speed, dir, line;
+
     app.motors = motors
     app.sensors = sensors
 
@@ -318,7 +340,7 @@ def spin_exit():
     curses.doupdate()
     while app.command_win.getch() == -1:
         pass
-    exit(-1)
+    nice_exit(-1)
 
 # Handle all user input, return True if command ready
 def handle_user():
@@ -339,7 +361,7 @@ def handle_user():
         app.command_win.border()
         idx = -1
         if cmd == 'exit':
-            exit(0)
+            nice_exit(0)
         return True
 
     elif c == curses.KEY_BACKSPACE or c == 8 or c == 127:
@@ -360,7 +382,7 @@ def handle_user():
             cmd = history[idx]
 
     elif c == curses.KEY_F1:
-        exit(0)
+        nice_exit(0)
 
     elif c == curses.KEY_RESIZE:
         handle_resize()
@@ -560,41 +582,72 @@ def execute_motors(split_command):
     for i, m in enumerate(app.motors):
         if m.symbol == split_command[0]:
             cmd = b''
-            if split_command[1] == 'off':
-                cmd = bytes(m.internal + '-4\n', 'utf-8')
-                app.motors[i].state = False
-                app.device.write(cmd)
-                return f'Turning off {m.name}'
 
-            elif split_command[1] == 'on':
-                cmd = bytes(m.internal + '-1\n', 'utf-8')
+            if split_command[1] == 'on':
+                cmd = bytes(';' + m.internal + ';-1\n', 'utf-8')
                 app.motors[i].state = True
                 app.device.write(cmd)
                 return f'Turning on {m.name}'
 
+            elif split_command[1] == 'off':
+                cmd = bytes(';' + m.internal + ';-2\n', 'utf-8')
+                app.motors[i].state = False
+                app.device.write(cmd)
+                return f'Turning off {m.name}'
+
+            elif split_command[1].isdigit():
+                cmd = bytes(';'+m.internal+';-3;'+split_command[1]+'\n', 'utf-8')
+                app.motors[i].speed = s_to_i(split_command[1])
+                app.device.write(cmd)
+                return f'Changing speed of {m.name} to {split_command[1]}'
+
             elif split_command[1] == 'fwd':
-                cmd = bytes(m.internal + '-2\n', 'utf-8')
+                cmd = bytes(';' + m.internal + ';-4\n', 'utf-8')
                 app.motors[i].direction = True
                 app.device.write(cmd)
                 return f'Spinning {m.name} forward'
 
             elif split_command[1] == 'bkwd':
-                cmd = bytes(m.internal + '-3\n', 'utf-8')
+                cmd = bytes(';' + m.internal + ';-5\n', 'utf-8')
                 app.motors[i].direction = False
                 app.device.write(cmd)
                 return f'Spinning {m.name} backward'
 
             elif split_command[1] == 'line':
-                cmd = bytes(m.internal + '-5\n', 'utf-8')
-                app.motors[i].direction = 2
+                cmd = bytes(';' + m.internal + ';-6\n', 'utf-8')
                 app.device.write(cmd)
-                return f'{m.name} set to linear mode'
+                if app.motors[i].direction == 2:
+                    app.motors[i].direction = 1
+                    return f'{m.name} set to not linear mode'
+                else:
+                    app.motors[i].direction = 2
+                    return f'{m.name} set to linear mode'
 
-            elif split_command[1].isdigit():
-                cmd = bytes(m.internal+split_command[1]+'\n', 'utf-8')
-                app.motors[i].speed = s_to_i(split_command[1])
+            elif split_command[1] == 'zero':
+                cmd = bytes(';' + m.internal + ';-7\n', 'utf-8')
                 app.device.write(cmd)
-                return f'Changing speed of {m.name} to {split_command[1]}'
+                return f'{m.name} zero position set'
+
+            elif split_command[1] == 'max':
+                cmd = bytes(';' + m.internal + ';-8\n', 'utf-8')
+                app.device.write(cmd)
+                return f'{m.name} maximum position set'
+
+            elif split_command[1] == 'step' and len(split_command) > 2:
+                cmd = bytes(';' + m.internal + ';-9;'+split_command[2] + '\n', 'utf-8')
+                app.device.write(cmd)
+                return f'{m.name} moving {split_command[2]} steps'
+
+            elif split_command[1] == 'speed' and len(split_command) > 2:
+                cmd = bytes(';' + m.internal + ';-10;'+split_command[2] + '\n', 'utf-8')
+                app.device.write(cmd)
+                return f'{m.name} maximum speed is now {split_command[2]} steps/sec'
+
+            elif split_command[1] == 'accel' and len(split_command) > 2:
+                cmd = bytes(';' + m.internal + ';-11;'+split_command[2] + '\n', 'utf-8')
+                app.device.write(cmd)
+                return f'{m.name} acceleration set to {split_command[2]}'
+
     split_command = ' '.join(split_command)
     return f'Command "{split_command}" is not a valid command.'
 
@@ -606,6 +659,8 @@ def execute_command():
         send_help()
     elif 'logo' in split_command:
         print_out(LOGO)
+    elif 'crash' in split_command:
+        x = 1/0
     elif 'splash' in split_command:
         print_out(SPLASH)
     elif 'bolbi' in split_command:
@@ -633,7 +688,7 @@ def dont_crash():
         app.stdscr.noutrefresh()
         curses.doupdate()
         if app.command_win.getch() == curses.KEY_F1:
-            exit(0)
+            nice_exit(0)
 
 # Custom rectangle funtion with option to choose character
 # Can be used with ' ' as ch to clear a previously drawn border
@@ -659,6 +714,16 @@ def rectangle(win, uly, ulx, lry, lrx, ch = None):
         win.addch(lry, ulx, ch)
     win.noutrefresh()
 
+def nice_exit(code = 0, qt = True):
+    if app.device == 0:
+        exit(code)
+    app.device.write(bytes(';0;-42;\n', 'utf-8'));
+    read_until() 
+    read_until() 
+    read_until()
+    if qt:
+        exit(code) 
+
 def main(stdscr):
     init_curses(stdscr)
     intro_animation()
@@ -675,5 +740,9 @@ def main(stdscr):
 if __name__ == '__main__':
     try:
         curses.wrapper(main)
-    except KeyboardInterrupt:
-        exit(0)
+    except Exception as e:
+        if e == KeyboardInterrupt:
+            nice_exit()
+        else:
+            nice_exit(qt = False)
+            raise e
