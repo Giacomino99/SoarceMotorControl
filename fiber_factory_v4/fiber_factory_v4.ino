@@ -199,7 +199,7 @@ cmd parse_cmd(String command) {
 
 void linear_motion(motor* lm) {
 
-	if (lm->go) {
+	if (!lm->go) {
 		lm->motor.run();
 		return;
 	}
@@ -299,7 +299,7 @@ void new_execute() {
 			break;
 		case -7:
 			motors[m_idx].motor.setCurrentPosition(0);
-			motors[m_idx].max_dist = 0;
+			// motors[m_idx].max_dist = 0;
 			motors[m_idx].speed = 0;
 			break;
 		case -8:
