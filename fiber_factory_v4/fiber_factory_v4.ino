@@ -40,6 +40,7 @@ struct motor {
     bool linear;
     int max_dist;
     bool enabled;
+    bool go;
 };
 
 struct sensor {
@@ -77,10 +78,10 @@ bool wait = false;
 
 #define NUM_MOTORS 4
 motor motors[NUM_MOTORS] = {
-    {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_2) , 1, ENA_1, 0, false, 0, false},
-    {'B', "Motor 2", AccelStepper(1, PUL_2, DIR_1) , 1, ENA_2, 0, false, 0, false},
-    {'C', "Motor 3", AccelStepper(1, PUL_3, DIR_3) , 1, ENA_3, 0, false, 0, false},
-    {'D', "Motor 4", AccelStepper(1, PUL_4, DIR_4) , 1, ENA_4, 0, false, 0, false},
+    {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_2) , 1, ENA_1, 0, false, 0, false, false},
+    {'B', "Motor 2", AccelStepper(1, PUL_2, DIR_1) , 1, ENA_2, 0, false, 0, false, false},
+    {'C', "Motor 3", AccelStepper(1, PUL_3, DIR_3) , 1, ENA_3, 0, false, 0, false, false},
+    {'D', "Motor 4", AccelStepper(1, PUL_4, DIR_4) , 1, ENA_4, 0, false, 0, false, false},
 };
 
 #define NUM_SENSORS 3
@@ -198,7 +199,7 @@ cmd parse_cmd(String command) {
 
 void linear_motion(motor* lm) {
 
-	if (lm->max_dist == 0) {
+	if (lm->go) {
 		lm->motor.run();
 		return;
 	}
@@ -247,6 +248,9 @@ void controller_cmds(cmd command) {
 	-7: zero
 	-8: max
 	-9: step *
+	-10: maxspeed
+	-11: acceleration
+	-12: go/stop
 */
 void new_execute() {
 	if (input == String(PING)) {
@@ -296,6 +300,7 @@ void new_execute() {
 		case -7:
 			motors[m_idx].motor.setCurrentPosition(0);
 			motors[m_idx].max_dist = 0;
+			motors[m_idx].speed = 0;
 			break;
 		case -8:
 			motors[m_idx].max_dist = motors[m_idx].motor.currentPosition();
@@ -308,6 +313,9 @@ void new_execute() {
 			break;
 		case -11:
 			motors[m_idx].motor.setAcceleration(split.arg);
+			break;
+		case -12:
+			motors[m_idx].go = !motors[m_idx].go;
 			break;
 		default:
 			break;

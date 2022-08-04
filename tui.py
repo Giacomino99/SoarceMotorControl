@@ -626,6 +626,7 @@ def execute_motors(split_command):
             elif split_command[1] == 'zero':
                 cmd = bytes(';' + m.internal + ';-7\n', 'utf-8')
                 app.device.write(cmd)
+                app.motors[i].speed = 0
                 return f'{m.name} zero position set'
 
             elif split_command[1] == 'max':
@@ -647,6 +648,11 @@ def execute_motors(split_command):
                 cmd = bytes(';' + m.internal + ';-11;'+split_command[2] + '\n', 'utf-8')
                 app.device.write(cmd)
                 return f'{m.name} acceleration set to {split_command[2]}'
+
+            elif split_command[1] == 'go':
+                cmd = bytes(';' + m.internal + ';-12\n', 'utf-8')
+                app.device.write(cmd)
+                return f'{m.name} linear motion toggled'
 
     split_command = ' '.join(split_command)
     return f'Command "{split_command}" is not a valid command.'
