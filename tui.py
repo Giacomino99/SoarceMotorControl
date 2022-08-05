@@ -20,7 +20,7 @@ app: Input, Output, Info, std
 
 Functions: print_out, draw_info, user_input
 '''
-TEST_MODE = False
+TEST_MODE = True
 BOLBI_TIME = False
 
 INFO_WIN_WIDTH = 30
@@ -146,10 +146,16 @@ def setup():
 
             if i == 9:
                 print_out('Could not connect to controller (is it plugged in?)\nPress any key to exit :(')
+                print_out('If it is plugged in: please unplug and replug the controller')
                 spin_exit()
 
         print_out('Connection established with controller')
         print_out('Start inputing commands:\n')
+        print_out('PLEASE READ HELP')
+        print_out('PLEASE READ HELP')
+        print_out('PLEASE READ HELP')
+        print_out('PLEASE READ HELP')
+        print_out('PLEASE READ HELP')
         return pong
 
     except Exception as e:
