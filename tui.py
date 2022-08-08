@@ -73,6 +73,7 @@ history = ['']
 idx = 0
 cmd = ''
 timer = time.time()
+select = 0
 
 # Eww yucky long bad
 def setup():
@@ -150,7 +151,6 @@ def setup():
                 spin_exit()
 
         print_out('Connection established with controller')
-        print_out('Start inputing commands:\n')
         # print_out('PLEASE READ HELP')
         # print_out('PLEASE READ HELP')
         # print_out('PLEASE READ HELP')
@@ -185,7 +185,7 @@ def intro_animation():
     print_out(' ')
     print_out(LOGO, 3)
     for i in range(8):
-        curses.init_pair(i+10, GRADIENT[i], -1)
+        curses.init_pair(i+10, GRADIENT[i], -1  )
     mat = TEXT.splitlines()
     x = len(LOGO.splitlines()[0]) + 6
     y = 2
@@ -309,8 +309,10 @@ def init_perif(config):
 
     if len(config) > 2 and 'REC' in config[2]:
         cmd = bytes(';0;-69;\n', 'utf-8')
-        app.device.write(cmd);
-        time.sleep(0.4);
+        app.device.write(cmd)
+        print_out('Controller already running, getting config\n')
+        curses.doupdate()
+        time.sleep(0.4)
         live_state = read_until().decode('utf-8')
         live_state = live_state.split('\n')[0].split(';')
         for i in live_state[1:]:
@@ -359,7 +361,8 @@ def handle_user():
 
     global idx
     global cmd
-    
+    global select
+
     if c == curses.KEY_ENTER or c == 10 or c == 13:
         history.insert(0, cmd)
         app.command_win.move(1,1)
@@ -388,8 +391,53 @@ def handle_user():
             cmd = history[idx]
 
     elif c == curses.KEY_F1:
-        nice_exit(0)
+        print_out(execute_motors([app.motors[0].symbol, 'off' if app.motors[0].state else 'on']))
+        draw_info(True)
 
+    elif c == curses.KEY_F2:
+        print_out(execute_motors([app.motors[1].symbol, 'off' if app.motors[1].state else 'on']))
+        draw_info(True)
+        
+    elif c == curses.KEY_F3:
+        print_out(execute_motors([app.motors[2].symbol, 'off' if app.motors[2].state else 'on']))
+        draw_info(True)
+        
+    elif c == curses.KEY_F4:
+        print_out(execute_motors([app.motors[3].symbol, 'off' if app.motors[3].state else 'on']))
+        draw_info(True)
+        
+    elif c == curses.KEY_F5:
+        select = 0
+        draw_info(True)
+
+    elif c == curses.KEY_F6:
+        select = 1
+        draw_info(True)
+
+    elif c == curses.KEY_F7:
+        select = 2
+        draw_info(True)
+
+    elif c == curses.KEY_F8:
+        select = 3
+        draw_info(True)
+
+    elif c == curses.KEY_F9:
+        print_out(execute_motors(['all', 'on']))
+        draw_info(True)
+        
+    elif c == curses.KEY_F10 or c == curses.KEY_F12:
+        print_out(execute_motors(['all', 'off']))
+        draw_info(True)
+        
+    elif c == ord('='):
+        print_out(execute_motors([app.motors[select].symbol, str(app.motors[select].speed + 10)]))
+        draw_info(True)
+        
+    elif c == ord('-'):
+        print_out(execute_motors([app.motors[select].symbol, str(max(0, app.motors[select].speed - 10))]))
+        draw_info(True)
+        
     elif c == curses.KEY_RESIZE:
         handle_resize()
 
@@ -464,6 +512,7 @@ def print_out(msg, off = 0):
 
 def draw_info(now = False):
     global timer
+    global select
     if not (now or time.time() - timer > UPDATE_INTERVAL):
         return
 
@@ -474,7 +523,7 @@ def draw_info(now = False):
         if y + 5 >= app.info_win.getmaxyx()[0] - len(app.sensors) * 3 + 1:
             break
         app.info_win.attron(curses.color_pair(2)) if m.state else app.info_win.attron(curses.color_pair(1))
-        app.info_win.addnstr(y, 1, f'{m.name}:', INFO_WIN_WIDTH - 2)
+        app.info_win.addnstr(y, 1, f'{m.name}:' + (' *' if (y-1)/5 == select else ''), INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+1, 4, f'Symbol: {m.symbol}', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+2, 4, f'Speed: {m.speed}', INFO_WIN_WIDTH - 2)
         app.info_win.addnstr(y+3, 4, f'Direction: ' + ('Backward' if not m.direction else ('Linear' if m.direction == 2 else 'Forward')), INFO_WIN_WIDTH - 2)
@@ -740,7 +789,7 @@ def main(stdscr):
     init_curses(stdscr)
     intro_animation()
     init_perif(setup())
-
+    print_out('Start inputing commands:\n')
     draw_info(now = True),
     while True:
         if handle_user():

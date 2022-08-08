@@ -33,9 +33,21 @@ HELP = '''Motor Commands:
     fwd - Step in the forward direction
     bkwd - Step in the reverse directiion
     [A NUMBER] - the number of steps per second, 1 revolution is 1600 steps
+    speed [A NUMBER] - set the maximum speed for a motor
+    linear - put motor into linear mode
+Linear Commands:
+    zero - Set zero point for linear motor
+    max - Set maximum point for linear motor
+    accel [A NUMBER] - Set the acceleration (I RECOMEND 10000)
+    step [A NUMBER] - Step motor that far, negative is backwards
+    go - toggle back and forth movement
 Other Commands:
     exit - Exit the program
-    help - display this help screen'''
+    help - display this help screen
+Notes:
+    Command format: [motor symbol] [commmand] [argument]
+    PLEASE TEST THE MOTORS BEFOREHAND,
+    SOME OF THE DIRECTIONS MIGHT BE ON THE WRONG MOTOR [I DON'T KNOW]'''
 
 BOLBI = '''⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠈⠀⡀⠄⠠⠐⠀⡂⠄⠄⡐⡀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠈⢀⠀⠄⠂⡀⠁⠄⠂⡐⢀⠂⡂⠅⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀

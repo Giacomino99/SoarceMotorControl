@@ -78,8 +78,8 @@ bool wait = false;
 
 #define NUM_MOTORS 4
 motor motors[NUM_MOTORS] = {
-    {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_2) , 1, ENA_1, 0, false, 0, false, false},
-    {'B', "Motor 2", AccelStepper(1, PUL_2, DIR_1) , 1, ENA_2, 0, false, 0, false, false},
+    {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_1) , 1, ENA_1, 0, false, 0, false, false},
+    {'B', "Motor 2", AccelStepper(1, PUL_2, DIR_2) , 1, ENA_2, 0, false, 0, false, false},
     {'C', "Motor 3", AccelStepper(1, PUL_3, DIR_3) , 1, ENA_3, 0, false, 0, false, false},
     {'D', "Motor 4", AccelStepper(1, PUL_4, DIR_4) , 1, ENA_4, 0, false, 0, false, false},
 };
