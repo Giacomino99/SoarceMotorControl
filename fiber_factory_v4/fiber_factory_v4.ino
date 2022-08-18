@@ -1,8 +1,5 @@
 
 #include <AccelStepper.h>
-// #include <OneWire.h>
-// #include <DallasTemperature.h>
-// #include <NonBlockingDallas.h>
 
 #define PUL_4 13
 #define DIR_4 12
@@ -76,6 +73,7 @@ unsigned long lock = 0x0;
 String config = "";
 bool wait = false;
 
+// Add a new line for a new motor :)
 #define NUM_MOTORS 4
 motor motors[NUM_MOTORS] = {
     {'A', "Motor 1", AccelStepper(1, PUL_1, DIR_1) , 1, ENA_1, 0, false, 0, false, false},
@@ -135,7 +133,7 @@ void setup() {
 		motors[i].motor.setAcceleration(500.0);
 		motors[i].motor.setSpeed(0);
 		motors[i].motor.setEnablePin(motors[i].ena_pin);
-		motors[i].motor.setPinsInverted(false, true, true);
+		motors[i].motor.setPinsInverted(true, false, true);
 		motors[i].motor.disableOutputs();
 	}
 
@@ -229,6 +227,8 @@ void controller_cmds(cmd command) {
 			out += motors[i].linear;
 			out += ',';
 			out += motors[i].enabled;
+			out += ',';
+			out += motors[i].go;
 		}
 		SerialUSB.println(out);
 	}
@@ -280,6 +280,7 @@ void new_execute() {
 			break;
 		case -2:
 			motors[m_idx].motor.disableOutputs();
+			motors[m_idx].go = false;
 			motors[m_idx].enabled = false;
 			break;
 		case -3:
@@ -296,10 +297,16 @@ void new_execute() {
 			break;
 		case -6:
 			motors[m_idx].linear = !motors[m_idx].linear;
+			motors[m_idx].motor.setCurrentPosition(0);
+			motors[m_idx].max_dist = 0;
+			motors[m_idx].go = false;
+			if (!motors[m_idx].linear) {
+				motors[m_idx].motor.setSpeed(motors[m_idx].speed * motors[m_idx].dir);
+			}
 			break;
 		case -7:
+			motors[m_idx].max_dist -= motors[m_idx].motor.currentPosition();
 			motors[m_idx].motor.setCurrentPosition(0);
-			// motors[m_idx].max_dist = 0;
 			motors[m_idx].speed = 0;
 			break;
 		case -8:
@@ -315,7 +322,8 @@ void new_execute() {
 			motors[m_idx].motor.setAcceleration(split.arg);
 			break;
 		case -12:
-			motors[m_idx].go = !motors[m_idx].go;
+			if (motors[m_idx].linear && motors[m_idx].enabled)
+				motors[m_idx].go = !motors[m_idx].go;
 			break;
 		default:
 			break;

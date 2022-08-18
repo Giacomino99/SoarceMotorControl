@@ -46,8 +46,7 @@ Other Commands:
     help - display this help screen
 Notes:
     Command format: [motor symbol] [commmand] [argument]
-    PLEASE TEST THE MOTORS BEFOREHAND,
-    SOME OF THE DIRECTIONS MIGHT BE ON THE WRONG MOTOR [I DON'T KNOW]'''
+    '''
 
 BOLBI = '''⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠈⠀⡀⠄⠠⠐⠀⡂⠄⠄⡐⡀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠈⢀⠀⠄⠂⡀⠁⠄⠂⡐⢀⠂⡂⠅⠤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
