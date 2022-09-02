@@ -89,6 +89,22 @@ sensor sensors[NUM_SENSORS] = {
     {'R', 0, "?", "Random", rander},
 };
 
+void setup() {
+
+	for (int i = 0; i < NUM_MOTORS; ++i) {
+		motors[i].motor.setMaxSpeed(64000);
+		motors[i].motor.setAcceleration(500.0);
+		motors[i].motor.setSpeed(0);
+		motors[i].motor.setEnablePin(motors[i].ena_pin);
+		motors[i].motor.setPinsInverted(true, false, true);
+		motors[i].motor.disableOutputs();
+	}
+
+	SerialUSB.begin(9600);
+
+	establish_comm();
+}
+
 // Establishes ocnnection to control program and sends config
 void establish_comm() {
 	while (true) {
@@ -124,22 +140,6 @@ void establish_comm() {
 	}
 	SerialUSB.println(config);
 	temp_timer = millis();
-}
-
-void setup() {
-
-	for (int i = 0; i < NUM_MOTORS; ++i) {
-		motors[i].motor.setMaxSpeed(64000);
-		motors[i].motor.setAcceleration(500.0);
-		motors[i].motor.setSpeed(0);
-		motors[i].motor.setEnablePin(motors[i].ena_pin);
-		motors[i].motor.setPinsInverted(true, false, true);
-		motors[i].motor.disableOutputs();
-	}
-
-	SerialUSB.begin(9600);
-
-	establish_comm();
 }
 
 /*
@@ -282,6 +282,9 @@ void new_execute() {
 			motors[m_idx].motor.disableOutputs();
 			motors[m_idx].go = false;
 			motors[m_idx].enabled = false;
+			if (motors[m_idx].linear) {
+				motors[m_idx].motor.setSpeed(0);
+			}
 			break;
 		case -3:
 			motors[m_idx].motor.setSpeed(split.arg * motors[m_idx].dir);

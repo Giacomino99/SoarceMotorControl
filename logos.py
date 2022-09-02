@@ -44,6 +44,8 @@ Linear Commands:
 Other Commands:
     exit - Exit the program
     help - display this help screen
+    save [NAME] - save current state as [NAME]
+    load [NAME] - load state with name [NAME]
 Notes:
     Command format: [motor symbol] [commmand] [argument]
     '''

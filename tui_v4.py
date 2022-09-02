@@ -1,7 +1,9 @@
 #!/usr/bin/python3
-
+'''
+TODO: less crashing
+update info when data availibe and remove timer
+'''
 import curses
-# from curses.textpad import Textbox, rectangle
 from dataclasses import dataclass, field
 from collections import defaultdict
 import serial
@@ -16,8 +18,7 @@ from logos import *
 from dummy import Dummy
 from config import *
 
-from motors_v2 import *
-from windows import *
+from windows_v2 import *
 
 '''
 app: Input, Output, Info, std
@@ -74,10 +75,10 @@ select = 0
 
 # Eww yucky long bad
 def setup():
-    print_out('Welcome to the Soarce™ control software!\n'+ 
-        'Attempting to find controller...\n')
+    print_out('Welcome to the Soarce™ control software!\nAttempting to find controller...\n')
     curses.doupdate()
     spin_wait(0.2, lock = True)
+
     for device in AUTO_DEVICE:
         ports = list(serial.tools.list_ports.grep(device))
         if len(ports) == 1:
@@ -86,13 +87,14 @@ def setup():
     if len(ports) == 1:
         print_out(f'Found device: {ports[0]}\n')
         curses.doupdate()
+
     elif TEST_MODE:
         print_out('YOU ARE IN TEST MODE!!\nNO COMMANDS WILL BE SENT TO ANY CONTROLLER!!\n', color = 1)
         print_out('Creating a dummy serial device...')
+
     else:
         print_out('Controller could not be identified')
         ports = list(serial.tools.list_ports.comports())
-        curses.doupdate()
         if len(ports) == 0:
             print_out('Could not find any devices (is it plugged in?)\n'
                 +'Press any key to exit :(')
@@ -106,46 +108,18 @@ def setup():
             while not handle_user():
                 curses.doupdate()
                 continue
-            x = s_to_i(app.cmd)
-            app.cmd = ''
+            x = s_to_i(app.command_win.get_command())
             if x in range(len(ports)):
                 break
             print_out('\nInvalid selection, please select the controler:')
 
     try:
         print_out('Connecting to controller...')
-        curses.doupdate()
+        
         if TEST_MODE:
             arduino = Dummy(PING, PONG, 5, 3)
         else:
-            arduino = serial.Serial(port=ports[x].device, baudrate=19200, timeout = 0, parity = 'N', stopbits = 1, bytesize = 8)
-        app.device = arduino
-        print_out('Attempting Handshake:\n')
-        curses.doupdate()
-        for i in range(10):
-            arduino.write(str(PING).encode() + b'\n')
-            print_out('Ping...', 3)
-            curses.doupdate()
-            spin_wait(0.5, lock = True)
-            try:
-                pong = read_until().decode('utf-8')
-            except Exception as e:
-                pong = ''
-                print_out('Invalid response...', 3)
-                curses.doupdate()
-
-            if s_to_i(pong.split(';')[0]) == PONG:
-                print_out('Pong...\n', 3)
-                break
-
-            if i == 9:
-                print_out('Could not connect to controller (is it plugged in?)\nPress any key to exit :(')
-                print_out('If it is plugged in: please unplug and replug the controller')
-                spin_exit()
-
-        print_out('Connection established with controller')
-        return pong
-
+            arduino = serial.Serial(port=ports[x].device, baudrate=115200, timeout = 0, parity = 'N', stopbits = 1, bytesize = 8)
     except Exception as e:
         print_out(''.join([
             'Could not establish connection...',
@@ -157,18 +131,39 @@ def setup():
         curses.doupdate()
         spin_exit()
 
-def read_until(term = b'\n'):
-    msg = b''
-    i = app.device.read()
-    n = 0
-    while i != term and i != b'' and n < 1000:
-        msg += i
-        i = app.device.read()
-        n += 1
-    app.device.reset_input_buffer()
-    return msg + i
+    app.device = arduino
+    print_out('Conencted!\n')
+    print_out('Attempting Handshake:\n')
+    curses.doupdate()
 
-# TODO: DON'T CRASH WITH RESIZE
+    for i in range(10):
+        arduino.write(PING.to_bytes(4, 'little'))
+        print_out('Ping...', 3)
+        curses.doupdate()
+
+        spin_wait(0.1, lock = True)
+        config = read_until()
+
+        try:
+            pong = int.from_bytes(config[:4], 'little')
+        except Exception as e:
+            pong = ''
+            print_out('Invalid response...', 3)
+            curses.doupdate()
+
+        if pong == PONG:
+            print_out('Pong...\n', 3)
+            print_out('Connection established with controller')
+            return config
+
+        else:
+            read_until()
+            spin_wait(0.4, lock = True)
+
+    print_out('Could not connect to controller (is it plugged in?)\nPress any key to exit :(')
+    print_out('If it is plugged in: please unplug and replug the controller')
+    spin_exit()
+
 def intro_animation():
     print_out(' ')
     l_num = len(app.output_win.full_out)
@@ -249,7 +244,7 @@ def init_curses(stdscr):
 
     curses.init_pair(69, 202, -1)
 
-    # Init app
+    # Init app data sctucture
     app.stdscr = stdscr
     app.stdscr.attron(curses.color_pair(2))
     app.stdscr.encoding = 'utf_8'
@@ -295,37 +290,48 @@ def init_perif(config):
     m_conf = []
     s_conf = []
 
-    config = config.split('\n')[0].split('&')
-    if len(config) >= 2:
-        m_conf = config[0].split(';')
-        s_conf = config[1].split(';')
+    config = config[4:]
+    d_max = int.from_bytes(config[0:2], 'little')
+    d_accel = int.from_bytes(config[2:4], 'little')
+    num_motor = config[4]
+    num_sensor = config[5]
+    config = config[6:]
 
-    for m in range(1,len(m_conf)):
-        info = m_conf[m].split(',')
-        motors.append(Motor(name = info[1], symbol = 'm'+str(m), internal = info[0]))
+    for m in range(num_motor):
+        x = config.index(b'\x00')
+        name = config[:x].decode('utf-8')
+        motors.append(Motor(name = name, symbol = 'm'+str(m+1), internal = 2**(m)))
+        config = config[x+1:]
 
-    for s in range(1,len(s_conf)):
-        info = s_conf[s].split(',')
-        sensors.append(Sensor(info[2], info[0], 0, info[1]))
+    for s in range(num_sensor):
+        x = config.index(b'\x00')
+        name = config[:x].decode('utf-8')
+        config = config[x+1:]
+        x = config.index(b'\x00')
+        unit = config[:x].decode('utf-8')
+        sensors.append(Sensor(name = name, unit = unit))
+        config = config[x+1:]
 
-    if len(config) > 2 and 'REC' in config[2]:
-        m_code = bytes(';0;-69;\n', 'utf-8')
-        app.device.write(m_code)
+    if len(config) >= 4 and int.from_bytes(config, 'little'):
+        while(read_until() == b''):
+            continue
+        Motor.special_serial_execute(app.device, 'state')
         print_out('Controller already running, getting config\n')
         curses.doupdate()
         time.sleep(0.4)
-        live_state = read_until().decode('utf-8')
-        live_state = live_state.split('\n')[0].split(';')
-        for i in live_state[1:]:
-            for m in motors:
-                s = i.split(',')
-                if s[0] == m.internal:
-                    m.speed = int(s[1])
-                    m.direction = bool(int(s[2])+1)
-                    m.linear = bool(int(s[3]))
-                    m.state = bool(int(s[4]))
-                    m.go = bool(int(s[5]))
-                    break
+        live_state = read_until(b'')
+        print_out(live_state)
+        # [state - 1 byte][dir - 1 byte][linear - 1 byte][go - 1 byte]
+        # [speed - 2bytes][accel - 2 bytes][max_speed - 2 bytes]
+        for i, m in enumerate(motors):
+            m.state = bool(live_state[0 + i*10])
+            m.direction = bool(live_state[1 + i*10])
+            m.linear = bool(live_state[2 + i*10])
+            m.go = bool(live_state[3 + i*10])
+            
+            m.speed = int.from_bytes(live_state[4 + i*10:6 + i*10], 'little')
+            m.accel = int.from_bytes(live_state[6 + i*10:8 + i*10], 'little')
+            m.max_speed = int.from_bytes(live_state[8 + i*10:10 + i*10], 'little')
 
     app.motors = motors
     app.sensors = sensors
@@ -348,12 +354,23 @@ def spin_exit():
         pass
     nice_exit(-1)
 
+def read_until(term = b'\n'):
+    msg = bytes(0)
+    i = app.device.read()
+    n = 0
+    while i != term and i != b'' and n < 1000:
+        msg += i
+        i = app.device.read()
+        n += 1
+    app.device.reset_input_buffer()
+    return msg + i
+
 # Handle all user input, return True if command ready
 def handle_user():
     return app.command_win.handle_user()
 
 def print_out(msg, off = 0, color = 2):
-    log(msg)
+    # log(msg)
     app.output_win.print_out(msg, off, color = color)
     return
 
@@ -396,7 +413,6 @@ def load_state(name):
         mtr.serial_execute(app.device, 'accel', ss[m]['accel'])
         mtr.serial_execute(app.device, 'speed', ss[m]['max_speed'])
         mtr.serial_execute(app.device, 'line' if (ss[m]['linear'] and not mtr.linear) or (not ss[m]['linear'] and mtr.linear) else '')
-        # mtr.serial_execute(app.device, 'go' if mtr.go else '')
     return 'State Loaded'
 
 def update_sensor_data():
@@ -404,16 +420,9 @@ def update_sensor_data():
         return
 
     stream = read_until()
-
-    if stream != b'':
-        stream = stream.decode().split(';')
-        for data in stream:
-            for i, s in enumerate(app.sensors):
-                if len(data) > 0 and data[0] == s.internal:
-                    try:
-                        app.sensors[i].value = float(data[1:])
-                    except Exception:
-                        app.sensors[i].value = -1
+    if stream != b'' and len(stream) == len(app.sensors)*4:
+        for i in range(len(app.sensors)):
+            app.sensors[i].value = int.from_bytes(stream[i*4:(i+1)*4], byteorder='little', signed=True)
 
 def send_help():
     print_out('Enter the symbol of the motor, then the command you wish to execute')
@@ -476,9 +485,11 @@ def spin_wait(dur, lock = False):
             draw_info()
     return True
 
-def execute_motors(m_sym, op, arg = '', safe = True):
+def execute_motors(m_sym, op, arg = 0, safe = True):
     if m_sym == 'all':
+        arg = s_to_i(arg)
         m_code, info_s = Motor.serial_execute_all(app.device, op, arg, safe)
+        if TEST_MODE: print_out(m_code) 
         return info_s
 
     if m_sym in Motor.motors:
@@ -490,7 +501,10 @@ def execute_motors(m_sym, op, arg = '', safe = True):
         else:
             arg = s_to_i(arg)
             m_code, info_s = Motor.motors[m_sym].serial_execute(app.device, op, arg, safe = safe)
-            if TEST_MODE: print_out(m_code) 
+            print_out(m_code)
+            # time.sleep(.05)
+            # msg = read_until()
+            # print_out(msg)
             return info_s
 
     return f'Command "{m_sym} {op} {arg}" is not a valid command.'
@@ -530,7 +544,7 @@ def execute_command():
 def nice_exit(code = 0, qt = True):
     if app.device == 0:
         exit(code)
-    app.device.write(bytes(';0;-42;\n', 'utf-8'));
+    Motor.special_serial_execute(app.device, 'disconnect')
     read_until()
     read_until() 
     read_until()
@@ -553,10 +567,9 @@ def main(stdscr):
         curses.doupdate()
 
 if __name__ == '__main__':
-    curses.wrapper(main)
-    # try:
-    #     curses.wrapper(main)
-    # except KeyboardInterrupt as e:
-    #     pass
-    # finally:
-    #     nice_exit(qt = False)
+    try:
+        curses.wrapper(main)
+    except KeyboardInterrupt as e:
+        pass
+    finally:
+        nice_exit(qt = False)
