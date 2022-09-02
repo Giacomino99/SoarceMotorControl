@@ -18,7 +18,7 @@ from logos import *
 from dummy import Dummy
 from config import *
 
-from windows_v2 import *
+from windows import *
 
 '''
 app: Input, Output, Info, std

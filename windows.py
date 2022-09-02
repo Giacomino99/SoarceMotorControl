@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 import time
 import random
 
-from motors_v2 import *
+from motors import *
 from logos import *
 
 @dataclass
