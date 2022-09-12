@@ -214,7 +214,7 @@ class Motor:
         return m_code, info_s
 
     @classmethod
-    def bind(cls, m1, m2):
+    def bind_motors(cls, m1, m2):
         cls.motors[m2].unbind()
         cls.motors[m1].bind(cls.motors[m2])
         return f'{cls.motors[m1].name} bound to {cls.motors[m2].name}'

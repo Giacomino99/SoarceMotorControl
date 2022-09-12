@@ -484,7 +484,7 @@ def execute_motors(m_sym, op, arg = 0, safe = True):
 
     if m_sym in Motor.motors:
         if op == 'bind' and arg in Motor.motors:
-            return Motor.bind(m_sym, arg)
+            return Motor.bind_motors(m_sym, arg)
         elif op == 'unbind':
             Motor.motors[m_sym].unbind()
             return f'{Motor.motors[m_sym].name} bindings removed'
