@@ -6,6 +6,11 @@ ARG_MAX = 2**(ARG_BYTES - 1) - 1
 ARG_MIN = -1 * 2**(ARG_BYTES - 1)
 
 @dataclass
+class Key_Binding:
+    key: int
+    command: callable
+
+@dataclass
 class Operation:
     op: str
     code: int
@@ -55,7 +60,8 @@ OPS = {
 
 SPECIAL_OPS = {
     'state': Operation('state', 69),
-    'disconnect': Operation('disconnect', 42)
+    'disconnect': Operation('disconnect', 42),
+    'sensor': Operation('sensor', 77)
 }
 
 @dataclass
@@ -219,7 +225,7 @@ class Motor:
         if cmd not in SPECIAL_OPS:
             return b''
 
-        m_code = m_code = Motor.gen_control(0, SPECIAL_OPS[cmd].code, arg)
+        m_code = Motor.gen_control(0, SPECIAL_OPS[cmd].code, arg)
         serial.write(m_code)
         return m_code
 
@@ -230,7 +236,9 @@ class Motor:
     @classmethod
     def gen_control(cls, m_num, op_code, arg):
         # Why cast to int? Because it is a float... Why is it a float? I don't know...
-        m_code = int(m_num).to_bytes(2, 'little') + op_code.to_bytes(2, 'little') + arg.to_bytes(2, byteorder='little', signed=True)
+        m_code = int(m_num).to_bytes(2, 'little') + \
+            op_code.to_bytes(2, 'little') + \
+            arg.to_bytes(2, byteorder='little', signed=True)
         return m_code
 
     def __eq__(self, other):
@@ -240,7 +248,8 @@ class Motor:
         s = f'{self.name}:' + (' *' if self == Motor.selected else '') + '\n'
         s += f'   Symbol: {self.symbol}\n'
         s += f'   Speed: {self.speed}\n'
-        s += '   Direction: ' + ('Linear' if self.linear else ('Forward' if self.direction else 'Backward')) + '\n'
+        s += '   Direction: ' + ('Linear' if self.linear else \
+            ('Forward' if self.direction else 'Backward')) + '\n'
         s += f'   Acceleration: {self.accel}\n'
         s += f'   Max Speed: {self.max_speed}\n'
         return s

@@ -3,13 +3,8 @@ from dataclasses import dataclass, field
 import time
 import random
 
-from motors import *
-from logos import *
-
-@dataclass
-class Key_Binding:
-    key: int
-    command: callable
+from lib.motors import *
+from lib.logos import *
 
 @dataclass
 class Window:
@@ -88,7 +83,7 @@ class Window:
             try:
                 win.addch(lry, lrx, curses.ACS_LRCORNER)
             except:
-                pass
+                x = 2
             win.addch(lry, ulx, curses.ACS_LLCORNER)
         else:
             win.vline(uly+1, ulx, ch, lry - uly - 1)
@@ -108,7 +103,9 @@ class Window:
         if self.pad:
             if self != self.border_win:
                 self.border_win.win.noutrefresh()
-                self.win.noutrefresh(0 + self.margin, 0 + self.margin, self.y + self.margin, self.x + self.margin, self.y + self.height - 1 - self.margin, self.x + self.width - 1 - self.margin)
+                self.win.noutrefresh(0 + self.margin, 0 + self.margin, \
+                    self.y + self.margin, self.x + self.margin, \
+                    self.y + self.height - 1 - self.margin, self.x + self.width - 1 - self.margin)
             else:
                 self.win.noutrefresh(0, 0, self.y, self.x, self.y + self.height - 1, self.x + self.width - 1)
         else:
@@ -190,7 +187,8 @@ class Window:
         for l in s.splitlines():
             if cy >= self.height - 1:
                 return
-            self.win.addnstr(cy, max(cx, self.margin) + x_off, l, self.width - self.margin - cx, curses.color_pair(color))
+            self.win.addnstr(cy, max(cx, self.margin) + x_off, l, \
+                self.width - self.margin - cx, curses.color_pair(color))
             cy += 1
 
         if nl:
@@ -223,9 +221,10 @@ class Info_Window(Window):
         self.timer = time.time()
         self.interval = interval
 
-    def check_time(self):
+    def check_time(self, rst = True):
         if time.time() - self.timer > self.interval:
-            self.timer = time.time()
+            if rst:
+                self.timer = time.time()
             return True
         return False
 
@@ -239,12 +238,14 @@ class Info_Window(Window):
         for m in self.motors:
             if self.win.getyx()[0] + 5 + len(self.sensors)*3 + self.margin > self.height:
                 break 
-            color = (self.off_color if not m.state else (self.sensor_color if (m.linear and not m.go) else self.on_color))
+            color = (self.off_color if not m.state else \
+                (self.sensor_color if (m.linear and not m.go) else self.on_color))
             self.addnstrnl(str(m), color = color)
             self.hlinenl(curses.ACS_HLINE, self.width - self.margin*2)
 
         if self.height - (Motor.motor_lines() + Sensor.sensor_lines() + 4) > 8:
-            self.win.move(Motor.motor_lines() + (self.height - Sensor.sensor_lines() - Motor.motor_lines() - len(LOGO.splitlines()))//2, self.margin)
+            self.win.move(Motor.motor_lines() + (self.height - Sensor.sensor_lines() \
+                - Motor.motor_lines() - len(LOGO.splitlines()))//2, self.margin)
             for l in LOGO.splitlines():
                 self.addnstrnl(l, (self.width - len(l) - self.margin*2) // 2, self.on_color)
 
@@ -321,7 +322,8 @@ class Command_Window(Window):
         self.win.move(self.margin, self.margin)
         self.win.clrtoeol()
         self.border()
-        self.win.addnstr(self.margin, self.margin, self.cmd, self.width - (2 * self.margin), curses.color_pair(self.text_color))
+        self.win.addnstr(self.margin, self.margin, self.cmd, self.width - \
+            (2 * self.margin), curses.color_pair(self.text_color))
         self.noutrefresh()
 
     def check_key(self, key):

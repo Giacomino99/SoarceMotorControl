@@ -3,6 +3,7 @@
 TODO: less crashing
 update info when data availibe and remove timer
 '''
+# Needed external libraries
 import curses
 from dataclasses import dataclass, field
 from collections import defaultdict
@@ -14,43 +15,17 @@ import smtplib
 import multiprocessing
 import json
 
-from logos import *
-from dummy import Dummy
+# Custom Libraries
+from lib.motors import *
+from lib.windows import *
+from lib.dummy import *
+from lib.logos import *
+
 from config import *
 
-from windows import *
-
-'''
-app: Input, Output, Info, std
-
-Functions: print_out, draw_info, user_input
-'''
-TEST_MODE = False
-BOLBI_TIME = False
-
-INFO_WIN_WIDTH = 30
-COMMAND_WIN_HEIGHT = 3
-PING = 0XABADBABE
-PONG = 0XB16B00B5
-# if ttyACM0 is used for something else it might break
-AUTO_DEVICE = ['arduino']
-MARKER = '>> '
-UPDATE_INTERVAL = 0.5
-
-GRADIENT = [39, 38, 45, 44, 43, 42, 41, 40]
-
-@dataclass
-class APP:
-    output_win: int
-    info_win: int
-    command_win: int
-    stdscr: int
-    motors: int = 0
-    sensors: int = 0
-    device: int = 0
-
 f_key = lambda n: print_out(execute_motors(app.motors[n].symbol, 'off' \
-            if (app.motors[n].state and not app.motors[n].linear) or (app.motors[n].linear and app.motors[n].go) else 'on'))
+            if (app.motors[n].state and not app.motors[n].linear) \
+            or (app.motors[n].linear and app.motors[n].go) else 'on'))
 
 KEY_BINDS = [ 
     Key_Binding(curses.KEY_F1, lambda: f_key(0)),
@@ -64,9 +39,21 @@ KEY_BINDS = [
     Key_Binding(curses.KEY_F9, lambda: print_out(execute_motors('all', 'on'))),
     Key_Binding(curses.KEY_F10, lambda: print_out(execute_motors('all', 'off'))),
     Key_Binding(curses.KEY_F12, lambda: print_out(execute_motors('all', 'off', safe = False))),
-    Key_Binding(ord(']'), lambda: print_out(execute_motors(Motor.selected.symbol, str(Motor.selected.speed + 10)))),
-    Key_Binding(ord('['), lambda: print_out(execute_motors(Motor.selected.symbol, str(max(0, Motor.selected.speed - 10))))),
+    Key_Binding(ord(']'), lambda: print_out(execute_motors(Motor.selected.symbol, 
+        str(Motor.selected.speed + 10)))),
+    Key_Binding(ord('['), lambda: print_out(execute_motors(Motor.selected.symbol, 
+        str(max(0, Motor.selected.speed - 10))))),
 ]
+
+@dataclass
+class APP:
+    output_win: int
+    info_win: int
+    command_win: int
+    stdscr: int
+    motors: int = 0
+    sensors: int = 0
+    device: int = 0
 
 app = APP(0, 0, 0, 0)
 history = ['']
@@ -249,7 +236,8 @@ def init_curses(stdscr):
     app.stdscr.attron(curses.color_pair(2))
     app.stdscr.encoding = 'utf_8'
 
-    app.output_win = Output_Window(stdscr = stdscr, p_height = curses.LINES + 100, p_width = curses.COLS + 100,
+    app.output_win = Output_Window(stdscr = stdscr, 
+        p_height = curses.LINES + 100, p_width = curses.COLS + 100,
         resize_y = lambda std: 0, 
         resize_x = lambda std: 0,
         resize_height = lambda std: std.getmaxyx()[0] - COMMAND_WIN_HEIGHT, 
@@ -264,7 +252,7 @@ def init_curses(stdscr):
         resize_width = lambda std: INFO_WIN_WIDTH,
         color = 5, pad = False, name = 'X')
     app.info_win.init_info()
-    app.info_win.set_timer(0.5)
+    app.info_win.set_timer(UPDATE_INTERVAL)
     app.info_win.border()
 
     app.command_win = Command_Window(stdscr = stdscr, 
@@ -354,7 +342,7 @@ def spin_exit():
         pass
     nice_exit(-1)
 
-def read_until(term = b'\n'):
+def read_until(term = b''):
     msg = bytes(0)
     i = app.device.read()
     n = 0
@@ -375,7 +363,8 @@ def print_out(msg, off = 0, color = 2):
     return
 
 def draw_info(now = False):
-    update_sensor_data()
+    if app.info_win.check_time(rst = False):
+        update_sensor_data()
     app.info_win.draw(now)
 
 def save_state(name):
@@ -419,6 +408,7 @@ def update_sensor_data():
     if app.device == 0 or app.sensors == 0:
         return
 
+    Motor.special_serial_execute(app.device, 'sensor')
     stream = read_until()
     if stream != b'' and len(stream) == len(app.sensors)*4:
         for i in range(len(app.sensors)):
@@ -439,7 +429,7 @@ def send_help():
 def message(cmds):
     if cmds[1].lower() in NUMBERS:
         try:
-            server = smtplib.SMTP('mail.supremecluster.com', 25)
+            server = smtplib.SMTP(SMTP_ADDRESS, SMTP_PORT)
             server.login(EMAIL, PASSWORD)
             server.sendmail(EMAIL, NUMBERS[cmds[1].lower()], ' '.join(cmds[2:]))
         except:
@@ -567,9 +557,14 @@ def main(stdscr):
         curses.doupdate()
 
 if __name__ == '__main__':
-    try:
-        curses.wrapper(main)
-    except KeyboardInterrupt as e:
-        pass
-    finally:
-        nice_exit(qt = False)
+    curses.wrapper(main)
+    # try:
+    #     curses.wrapper(main)
+    # except Exception as e:
+    #     if e == KeyboardInterrupt:
+    #         nice_exit()
+    #     else:
+    #         nice_exit()
+    #         raise(e)
+    # finally:
+    #     nice_exit(qt = False)

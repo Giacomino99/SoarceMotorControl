@@ -19,8 +19,6 @@
 #define DIR_1 3
 #define ENA_1 2
 
-const uint16_t INTERVAL = 500;
-
 const uint32_t PING = 0XABADBABE;
 const uint32_t PONG  = 0XB16B00B5;
 
@@ -28,12 +26,10 @@ const uint16_t DEFAULT_ACCEL = 2000;
 const uint16_t DEFAULT_MAX = 32000;
 
 uint16_t MASKS[16];
-uint32_t temp_timer = 0;
 uint32_t lock = 0x0;
 uint8_t* config;
 uint16_t conf_len = 0;
 bool wait = false;
-bool sw = false;
 
 #define NUM_SENSORS 3
 #define NUM_MOTORS 4
@@ -127,7 +123,6 @@ void establish_comm() {
     }
     SERIAL_PROTO.write((byte*)&PONG, 4);
     SERIAL_PROTO.write(config, conf_len);
-    temp_timer = millis();
 }
 
 void update_values(Sensor* sensors) {
@@ -141,7 +136,6 @@ void update_values(Sensor* sensors) {
 void new_comm(void) {
     byte inp[sizeof(uint16_t)*3] = {0,0,0,0,0,0};
     SERIAL_PROTO.readBytes(inp, 6);
-    SERIAL_PROTO.write(inp, 6);
 
     uint32_t check = *((uint32_t*)(inp));
     uint16_t mtr = *((uint16_t*)(inp));
@@ -157,7 +151,6 @@ void new_comm(void) {
         SERIAL_PROTO.write((byte*)&PONG, 4);
         SERIAL_PROTO.write(config, conf_len);
         SERIAL_PROTO.write((byte*)&PONG, 4);
-        temp_timer = millis();
         return;
     }
 
@@ -169,23 +162,39 @@ void new_comm(void) {
 }
 
 void controller_cmds(uint16_t op, int16_t arg) {
-    if (op == 69) {
-        for (uint8_t i = 0; i < NUM_MOTORS; ++i)
-        {
-            uint8_t out[10];
-            out[0] = motors[i].enabled;
-            out[1] = motors[i].dir + 1;
-            out[2] = motors[i].linear;
-            out[3] = motors[i].go;
-            *(uint16_t*)(out+4) = motors[i].speed;
-            *(uint16_t*)(out+6) = motors[i].acceleration;
-            uint16_t ms = (uint16_t)motors[i].motor.maxSpeed();
-            *(uint16_t*)(out+8) = ms;
-            SERIAL_PROTO.write(out, 10);
-        }
-    }
-    if (op == 42) {
-        wait = true;
+    switch(op) {
+        case 77:
+            update_values(sensors);
+            if (wait) {
+                return;
+            }
+            uint8_t s_out[NUM_SENSORS * 4];
+            for (uint16_t i = 0; i < NUM_SENSORS; ++i)
+            {
+                *(int32_t*)(s_out+(i*4)) = sensors[i].value;
+            }
+            SERIAL_PROTO.write(s_out, NUM_SENSORS * 4);   
+            break;
+
+        case 69:
+            for (uint8_t i = 0; i < NUM_MOTORS; ++i)
+            {
+                uint8_t out[10];
+                out[0] = motors[i].enabled;
+                out[1] = motors[i].dir + 1;
+                out[2] = motors[i].linear;
+                out[3] = motors[i].go;
+                *(uint16_t*)(out+4) = motors[i].speed;
+                *(uint16_t*)(out+6) = motors[i].acceleration;
+                uint16_t ms = (uint16_t)motors[i].motor.maxSpeed();
+                *(uint16_t*)(out+8) = ms;
+                SERIAL_PROTO.write(out, 10);
+            }
+            break;
+
+        case 42:
+            wait = true;
+            break;
     }
 }
 
@@ -292,19 +301,4 @@ void loop() {
 
     if (SERIAL_PROTO.available())
         new_comm();
-
-    if (millis() - temp_timer > INTERVAL) {
-        update_values(sensors);
-        temp_timer = millis();
-        if (wait) {
-            return;
-        }
-        uint8_t s_out[NUM_SENSORS * 4];
-        for (uint16_t i = 0; i < NUM_SENSORS; ++i)
-        {
-            *(int32_t*)(s_out+(i*4)) = sensors[i].value;
-        }
-        SERIAL_PROTO.write(s_out, NUM_SENSORS * 4);
-        sw = !sw;       
-    }
 }

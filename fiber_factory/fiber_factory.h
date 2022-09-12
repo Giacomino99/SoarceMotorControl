@@ -39,5 +39,5 @@ void get_temp(void* s) {
 }
 
 void incer(void* s) {
-    ((Sensor*)(s))->value++;
+    ((Sensor*)(s))->value = millis()/1000;
 }
